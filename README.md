@@ -1,0 +1,2 @@
+# MalDim
+Challenge data
