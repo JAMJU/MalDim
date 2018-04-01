@@ -6,6 +6,8 @@ import matplotlib.colors as mpc
 colors = mpc.cnames.keys()
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+from study_data import compare_pred_truth
+from collections import Counter
 
 def get_array(namefile):
     """ Return an array from file with index + vector in each line"""
@@ -42,17 +44,91 @@ def get_label_list(namefile):
                 first = False
     return list_label
 
+def write_label(label_list, out_file, begin_index):
+    out = open(out_file, 'w')
+    ind = begin_index
+    out.write('ID;intention\n')
+
+    for i in range(len(label_list)):
+        out.write(str(ind) + ';' +str(label_list[i]))
+        out.write('\n')
+        ind += 1
+
+
+# Choose the model
+#
+Log_reg = True
+C_log = 500.
+
+
+
 mat = get_array( 'data/created/train/vector_input_fasttext.csv')
 mat_test = get_array('data/created/test/vector_input_test_fasttext.csv')
 lab = get_label_list('data/label.csv')
 color_lab = [colors[l] for l in lab]
 
-size_test = int(1./100.*mat.shape[0])
-print "size test", size_test
-mat_test_train = mat[0:size_test, :]
-lab_test_train = lab[0:size_test]
-mat_train = mat[size_test:, :]
-lab_train = lab[size_test:mat.shape[0]]
+nb_cross_validation = 10
+size_test = int(float(mat.shape[0])/float(nb_cross_validation))
+print("size test", size_test)
+beg = 0
+total_mis_pred = {k:0 for k in range(51)}
+total_good_pred = {k:0 for k in range(51)}
+class_instead = {k:[] for k in range(51)}
+mean_train = 0.
+mean_test = 0.
+for i in range(nb_cross_validation):
+    print("cross validation ", i, "on", nb_cross_validation)
+    mat_test_train = mat[beg:beg + size_test, :]
+    lab_test_train = lab[beg : beg + size_test]
+
+    mat_train = np.concatenate((mat[0:beg], mat[beg + size_test:, :]), axis = 0)
+    lab_train = lab[0:beg] + lab[beg + size_test:]
+    beg = beg + size_test
+
+    ## Classification method
+    if Log_reg:
+        from sklearn.linear_model import LogisticRegression
+
+        # instantiate a logistic regression model, and fit with X and y
+        model = LogisticRegression(solver='newton-cg', multi_class='multinomial', C=C_log, verbose=1)
+        model = model.fit(mat_train, lab_train)
+
+        # check the accuracy on the training set
+        score_train =  model.score(mat_train, lab_train)
+        score_test = model.score(mat_test_train, lab_test_train)
+        print ("On training",score_train)
+        print ("On test", score_test)
+        mean_train += score_train/float(nb_cross_validation)
+        mean_test += score_test/float(nb_cross_validation)
+
+        y = model.predict(mat_test_train)
+        dict_rep, dict_true, dict_false, dict_id = compare_pred_truth(lab_test_train, y)
+        for k in dict_rep.keys():
+            #print ("classe", k, "nb:", dict_rep[k], "good_pred:", dict_true[k], "fake_pred:", dict_false[k])
+            #print (" ")
+            total_mis_pred[k] += dict_false[k]
+            total_good_pred[k] += dict_true[k]
+            class_instead[k] += dict_id[k]
+
+out = open("data/created/result_log_reg_500_fasttext.txt", 'w')
+for k in range(51):
+    print("class", k, "good pred", total_good_pred[k], "fake pred", total_mis_pred[k], "ok percent", float(total_good_pred[k])/float(total_mis_pred[k] + total_good_pred[k]))
+    out.write("class " + str(k) + " good pred " + str(total_good_pred[k]) + " fake pred " + str(total_mis_pred[k]) + " ok percent " + str( float(total_good_pred[k])/float(total_mis_pred[k] + total_good_pred[k])))
+    out.write('\n')
+    out.write('\n')
+    print(" ")
+    print("IDENTIFIED INSTEAD OF CLASS", k, '#######################################"')
+    out.write("IDENTIFIED INSTEAD OF CLASS "+ str( k) +  '#######################################' + '\n')
+    print(Counter(class_instead[k]))
+    out.write(str(Counter(class_instead[k])) + '\n')
+    print('###########################################################')
+    out.write('###########################################################' + '\n')
+print("TOTAL", "train", mean_train, "test", mean_test)
+out.write("TOTAL " + "train " + str(mean_train) +  " test " + str(mean_test))
+
+
+
+
 
 
 # Ridge classifier # not bad -> to test with all the data
@@ -87,7 +163,7 @@ print "on test training", model_ridge.score(mat_test_train, lab_test_train)"""
 
 
 # Logistic Regression 
-from sklearn.linear_model import LogisticRegression
+"""from sklearn.linear_model import LogisticRegression
 
 
 # instantiate a logistic regression model, and fit with X and y
@@ -102,7 +178,7 @@ f = open('data/created/results/log_reg_fasttext_raw_C-500.csv', 'w')
 y = model.predict(mat_test)
 for i in range(len(y)):
     f.write(str(y[i]) + "\n")
-f.close()
+f.close()"""
 
 
 # Boosting

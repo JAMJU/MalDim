@@ -1,5 +1,7 @@
 
-
+from lev_distance import levenshtein_dist
+import enchant
+dictionnary_french = enchant.Dict('fr_FR')
 
 def is_number(s):
     try:
@@ -94,6 +96,9 @@ def get_list_components(namefile):
                 list_comp.append(list_comp)
 
     return len(list_comp)
+
+def get_medicamnt_close(list_medoc, name_to_look_for):
+
 
 
 #create_list_med_commercialised('data/CIS.txt', 'data/created/med_commercialised.txt')

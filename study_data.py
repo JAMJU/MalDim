@@ -38,20 +38,22 @@ def compare_pred_truth(list_label_true, list_label_pred):
     dict_repart = get_repartition_label(list_label_true)
     dict_true = {i:0 for i in range(51)}
     dict_false = {i:0 for i in range(51)}
+    dict_class_identified_instead = {i:[] for i in range(51)}
     for i in range(len(list_label_true)):
         if list_label_true[i] == list_label_pred[i]:
             dict_true[list_label_true[i]]  +=1
         else:
             dict_false[list_label_true[i]] += 1
-    return dict_repart, dict_true, dict_false
+            dict_class_identified_instead[list_label_true[i]].append(list_label_pred[i])
+    return dict_repart, dict_true, dict_false, dict_class_identified_instead
 
-label_all = get_label_list("data/label.csv")
+"""label_all = get_label_list("data/label.csv")
 dict_label_all = get_repartition_label(label_all)
 list_label_true = get_label_list("data/created/test_train/original_net.csv")
 list_label_pred = get_label_list("data/created/test_train/results_net.csv")
 dict_rep, dict_true, dict_false = compare_pred_truth(list_label_true, list_label_pred)
 for k in dict_rep.keys():
     print "classe", k, "nb:", dict_rep[k], "total in database", dict_label_all[k], "good_pred:", dict_true[k], "fake_pred:", dict_false[k]
-    print " "
+    print " """
 
 
