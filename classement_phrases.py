@@ -36,4 +36,4 @@ def create_class_files(namefold, dict_classes):
                 f.write(phr)
                 f.write("\n")
 
-create_class_files("classement/", dict_classes)
+#create_class_files("classement/", dict_classes)

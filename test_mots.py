@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from collections import defaultdict
 
 def search_list_word(namefile, list_world):

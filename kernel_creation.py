@@ -143,6 +143,62 @@ def create_mean_vectors_fromfasttext(namefile, fastext_file, out_file):
                 first = False
         out.close()
 
+def create_fasttext_only(namefile_input, namefile_output, fastext_file):
+    dict_voc_already_searched = {}
+    dict_word_to_ignore = []
+    number_line = 0
+    out = open(namefile_output, 'a')
+    with open(namefile_input, 'r') as f:
+        first = True
+        for line in f:
+            number_line += 1
+            print number_line
+            if not first:
+                new_line = line.replace('\n', '')
+                new_line = new_line.split(';')
+                ind = new_line[0]
+                sent = new_line[1].split(' ')
+
+                vect = []
+
+                # vocabulary
+                mean_vect_voc = np.zeros([1, 300])  # 300 is the size of vector in fasttext
+                nb_word_counted = 0.
+
+                for wrd in sent:
+                    if len(wrd) >= 1 and not wrd in dict_word_to_ignore:
+                        if wrd[0] == '#':
+                            word = 'médicament'
+                        elif wrd == '@card@':
+                            word = '1'
+                        else:
+                            word = wrd
+                        if word in dict_voc_already_searched.keys():
+                            mean_vect_voc = mean_vect_voc + np.asarray(dict_voc_already_searched[word]).reshape(
+                                [1, 300])
+                            nb_word_counted += 1.
+                        else:
+                            vector_word = get_word(fastext_file, word)
+                            if vector_word != []:
+                                dict_voc_already_searched[word] = vector_word
+                                mean_vect_voc = mean_vect_voc + np.asarray(vector_word).reshape([1, 300])
+                            else:
+                                dict_word_to_ignore.append(word)
+
+
+                for i in range(300):
+                    vect.append(mean_vect_voc[0, i])
+
+                # writing
+                out.write(ind)
+                print ind
+                for n in vect:
+                    out.write(',' + str(n))
+                out.write('\n')
+
+            else:
+                first = False
+        out.close()
 
 
 
@@ -159,6 +215,64 @@ def get_array(namefile):
             list_vect.append(vec)
     return np.asarray(list_vect)
 
+def create_kernel_from_fasttext_already_created(namefile_fasttext_array, namefile_input, namefile_output):
+    array_fasttex = get_array(namefile_fasttext_array)
+    number_line = 0
+    out = open(namefile_output, 'a')
+    with open(namefile_input, 'r') as f:
+        first = True
+        for line in f:
+            number_line += 1
+            print number_line - 2
+            if not first:
+                new_line = line.replace('\n', '')
+                new_line = new_line.split(';')
+                ind = new_line[0]
+                all_sent = new_line[1]
+                sent = new_line[1].split(' ')
+                size_sent = float(len(sent))
+                c = Counter(sent)
+                vect = []
+
+                # first numbers appearance
+                nb_appear = 0
+                for n in nb:
+                    if n in all_sent:
+                        nb_appear += 1
+                vect.append(float(nb_appear) / float(size_sent))
+
+                # nb medoc
+                nbhash = all_sent.count('#')
+                vect.append(float(nbhash) / 4. / float(size_sent))
+
+                # fasttext
+                for i in range(300):
+                    vect.append(array_fasttex[number_line - 2, i] / float(size_sent))
+
+                # writing
+                out.write(ind)
+                print ind
+                for n in vect:
+                    out.write(',' + str(n))
+                out.write('\n')
+
+            else:
+                first = False
+        out.close()
+
+
+
+def get_only_fasttext(namefile_input, namefile_output):
+    input = open(namefile_input, 'r')
+    output = open(namefile_output, 'w')
+    for line in input:
+        new_line = line.replace('\n', '')
+        new_line = new_line.split(',')
+        only_fast = [new_line[0]] + new_line[3:]
+        output.write(','.join(only_fast) + '\n')
+
+
+
 
 # train data
 #create_mean_vectors_fromfasttext('data/created/train/input_train_token_normalized.csv', 'data/cc.fr.300.vec', 'data/created/train/vector_input_fasttext2.csv')
@@ -167,6 +281,10 @@ def get_array(namefile):
 #create_mean_vectors_fromfasttext('data/created/test/input_test_token_normalized.csv', 'data/cc.fr.300.vec', 'data/created/test/vector_input_test_fasttext.csv')
 #create_vectors('data/created/input_test_token_normalized.csv', 'data/created/voc_train_second_clean.csv' ,'data/created/vector_test_input.csv')
 
-
+"""get_only_fasttext('data/created/train/vector_input_fasttext.csv', 'data/created/train/vector_input_fasttext_only.csv')
+get_only_fasttext('data/created/test/vector_input_test_fasttext.csv', 'data/created/test/vector_input_test_fasttext_only.csv')"""
+#create_fasttext_only("data/created/train/input_train_norm_medoc_corrected_v2.csv","data/created/train/vect_train_fasttext_v2.csv", 'data/cc.fr.300.vec')
+#create_fasttext_only("data/created/test/input_test_norm_medoc_corrected_v2.csv","data/created/test/vect_test_fasttext_v2.csv", 'data/cc.fr.300.vec')
+#create_kernel_from_fasttext_already_created("data/created/train/vect_train_fasttext_v2.csv", "data/created/train/input_train_norm_medoc_corrected_v2.csv","" )
 
 

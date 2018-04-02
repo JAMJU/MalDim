@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import codecs
-from medicament import get_list_medoc, is_number
+from medicament import get_list_medoc, is_number, get_list_medoc_first
 import enchant
 import numpy as np
 import os
@@ -9,8 +9,8 @@ from lev_distance import levenshtein_dist
 import matplotlib.pyplot as plt
 import matplotlib as mlab
 
-list_med_com = get_list_medoc("data/created/medicaments/med_commercialised.txt")
-list_med_non_com = get_list_medoc("data/created/medicaments/med_non_commercialised.txt")
+list_med_com = get_list_medoc_first("data/created/medicaments/med_commercialised.txt")
+list_med_non_com = get_list_medoc_first("data/created/medicaments/med_non_commercialised.txt")
 dictionnary_french = enchant.Dict('fr_FR')
 dict_abreviation = {'qq':"quelque", 'bcp':'beaucoup', 'nb':'nombre', 'qqun':"quelqu'un",'chgt':'changement', 'infos':'informations', 'info':'information' , 'bb':'bébé'}
 punctuation = ['"', '.', ',', ';', ':', '/', '!', '?', '(', ')', '#', '*', '<', '>', '[', ']', "'", '€', '-', "’", "=", '+', '&', '`', '%', '»', '«', "'"]
@@ -92,7 +92,7 @@ def correction(word):
         for med in list_med_com:
             if word in med:
                 print "MEDOC ID COM!"
-                medoc = med.split(' ')
+                """medoc = med.split(' ')
                 name_medoc = ''
                 first = True
                 for m in medoc:
@@ -101,12 +101,12 @@ def correction(word):
                             name_medoc += '-'
                         else:
                             first = False
-                        name_medoc += m
-                return '##' + name_medoc + '##'
+                        name_medoc += m"""
+                return '##' + med + '##'
         for med in list_med_non_com:
             if word in med:
                 print "MEDOC ID NON COM!"
-                medoc = med.split(' ')
+                """medoc = med.split(' ')
                 name_medoc = ''
                 first = True
                 for m in medoc:
@@ -115,8 +115,8 @@ def correction(word):
                             name_medoc += '-'
                         else:
                             first = False
-                        name_medoc += m
-                return '##' + name_medoc + '##'
+                        name_medoc += m"""
+                return '##' + med + '##'
 
 
     # use enchant -> if distance reasonable, keep it otherwise we leave it as it is
@@ -287,6 +287,28 @@ def get_vocabulary_list_appear(namefile):
                 list_voc[li[0]] = li[1]
     return list_voc
 
+def get_label_list(namefile):
+    """ Return the list of labels from namefile"""
+    list_label = []
+    first = True
+    with open(namefile, 'r') as f:
+        for line in f:
+            if not first:
+                new_line = line.split(';')
+                qt = int(new_line[1].replace('\n', ''))
+                list_label.append(int(qt))
+            else:
+                first = False
+    return list_label
+
+def get_sentences_list(namefile_input):
+    list_sent = []
+    file = open(namefile_input)
+    for line in file:
+        new_line = line.replace('\n', '')
+        sent = new_line.split(' ')[1]
+        list_sent.append(sent)
+    return list_sent
 
 def get_vocabulary_present_in_class(label, namefile_voc, namefile_input, namefile_label, namefile_out):
     """ From file of voc, create a file with the voc present in senteneces if their label is the one selected"""
@@ -357,8 +379,10 @@ def get_voc_compare(namefile_type, namefile_out, beg, ending):
 # train data
 
 #tokenize_file('data/input_train.csv', 'data/created/input_train_token.csv')
-#correction_file('data/created/input_train_token.csv', 'data/created/input_train_token_corrected.csv')
-#normalize_file('data/created/input_train_token_corrected.csv', 'data/created/input_train_token_normalized.csv')
+#correction_file('data/created/train/input_train_token.csv', 'data/created/input_train_token_corrected_v2.csv')
+#correction_file('data/created/test/input_test_token.csv', 'data/created/input_test_token_corrected_v2.csv')
+#normalize_file('data/created/train/input_train_token_corrected_v2.csv', 'data/created/train/input_train_token_nor_v2.csv')
+#normalize_file('data/created/test/input_test_token_corrected_v2.csv', 'data/created/test/input_test_token_nor_v2.csv')
 #get_vocabulary_list_and_scores("data/created/input_train_token_normalized.csv", "data/created/vocabulary_train.csv")
 #clear_vocabulary( "data/created/vocabulary_train.csv",  "data/created/vocabulary_train_firstclean.csv")
 #analyse("data/created/vocabulary_train_firstclean.csv")
