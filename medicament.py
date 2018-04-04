@@ -120,7 +120,7 @@ def get_list_components(namefile):
 
 def get_medicamnt_close(list_medoc, name_to_look_for):
     """ Return the name of medoc closer un list_medoc"""
-    print name_to_look_for
+    print(name_to_look_for)
     if dictionnary_french.check(name_to_look_for.lower()): # just recheck
         return name_to_look_for
     else:
@@ -220,4 +220,4 @@ list_total_med = list_med_com + list_med_uncom
 write_new_file_with_medoc_rewritten('data/created/train/input_train_token_nor_v2.csv', 'data/created/train/input_train_norm_medoc_corrected_v2.csv', list_total_med )
 write_new_file_with_medoc_rewritten('data/created/test/input_test_token_nor_v2.csv', 'data/created/test/input_test_norm_medoc_corrected_v2.csv', list_total_med )"""
 
-
+# write_list_medoc_in_file("../input_test_norm_medoc_corrected_v2.csv",  "../test_v2_list_medoc.csv")

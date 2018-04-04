@@ -9,5 +9,4 @@ def treat_results(result_file, out_file, begin_index):
             out.write('\n')
             ind +=1
 
-#treat_results('data/created/results/log_reg_fasttext_raw_C-500.csv', 'data/created/results/log_reg_fasttext_C-500.csv', 8028)
-
+treat_results('data/log_reg_fasttext_modif_raw_C-500.csv', 'data/log_reg_fasttext_modif_C-500.csv', 8028)

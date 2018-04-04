@@ -2,8 +2,8 @@
 #from vocabulary import get_label_list
 import numpy as np
 from sklearn.decomposition import PCA
-import matplotlib.colors as mpc
-colors = mpc.cnames.keys()
+# import matplotlib.colors as mpc
+# colors = mpc.cnames.keys()
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from study_data import compare_pred_truth
@@ -58,14 +58,44 @@ def write_label(label_list, out_file, begin_index):
 # Choose the model
 #
 Log_reg = True
-C_log = 500.
+C_log = 200.
+
+Ridge_reg = False
+alpha_reg = 0.00001
+
+Boosting = False
+depth = 2
+lrn_rate = 0.1
+nb_est = 100
+
+SVM = False
+C_svm = 50
+svm_kern =  "rbf" #"sigmoid", "rbf"
+
+def center_norm_data(namefile):
+    all_data = []
+    with open(namefile, 'r') as f:
+        for line in f:
+            list_line = []
+            line.replace('\n', '')
+            line = line.split(',')
+            for num in line:
+                list_line.append(float(num))
+            all_data.append(list_line)
+    array_data = np.asarray(all_data, dtype = float)
+    mean =  np.mean(array_data, axis= 0)
+    array_data = array_data - mean
+    # vst = np.std(array_data, axis= 0)
+    # array_data = array_data / vst
+    return array_data
 
 
-
-mat = get_array( 'data/created/train/vector_input_fasttext.csv')
-mat_test = get_array('data/created/test/vector_input_test_fasttext.csv')
+# mat = get_array( 'data/vector_input_fasttext_and_other_v2_modified.csv')
+# mat_test = get_array('data/vector_input_test_fasttext_and_other_v2_modified.csv')
+mat = center_norm_data( 'data/vector_input_fasttext_and_other_v2_modified.csv')
+mat_test = center_norm_data('data/vector_input_test_fasttext_and_other_v2_modified.csv')
 lab = get_label_list('data/label.csv')
-color_lab = [colors[l] for l in lab]
+# color_lab = [colors[l] for l in lab]
 
 nb_cross_validation = 10
 size_test = int(float(mat.shape[0])/float(nb_cross_validation))
@@ -76,6 +106,8 @@ total_good_pred = {k:0 for k in range(51)}
 class_instead = {k:[] for k in range(51)}
 mean_train = 0.
 mean_test = 0.
+result_log_file = ""
+
 for i in range(nb_cross_validation):
     print("cross validation ", i, "on", nb_cross_validation)
     mat_test_train = mat[beg:beg + size_test, :]
@@ -109,8 +141,84 @@ for i in range(nb_cross_validation):
             total_mis_pred[k] += dict_false[k]
             total_good_pred[k] += dict_true[k]
             class_instead[k] += dict_id[k]
+        result_log_file = "data/result_log_reg_500_fasttext.txt"
 
-out = open("data/created/result_log_reg_500_fasttext.txt", 'w')
+    if Ridge_reg:
+        from sklearn.linear_model import RidgeClassifier
+
+        # instantiate a logistic regression model, and fit with X and y
+        model_ridge = RidgeClassifier(normalize=True, alpha = alpha_reg)
+        model_ridge = model_ridge.fit(mat_train, lab_train)
+
+        # check the accuracy on the training set
+        score_train =  model_ridge.score(mat_train, lab_train)
+        score_test = model_ridge.score(mat_test_train, lab_test_train)
+        print ("On training",score_train)
+        print ("On test", score_test)
+        mean_train += score_train/float(nb_cross_validation)
+        mean_test += score_test/float(nb_cross_validation)
+
+        y = model_ridge.predict(mat_test_train)
+        dict_rep, dict_true, dict_false, dict_id = compare_pred_truth(lab_test_train, y)
+        for k in dict_rep.keys():
+            #print ("classe", k, "nb:", dict_rep[k], "good_pred:", dict_true[k], "fake_pred:", dict_false[k])
+            #print (" ")
+            total_mis_pred[k] += dict_false[k]
+            total_good_pred[k] += dict_true[k]
+            class_instead[k] += dict_id[k]
+        result_log_file = "data/result_ridge_reg_10_-4_fasttext.txt"
+
+    if Boosting:
+        from sklearn.ensemble import GradientBoostingClassifier
+
+        # instantiate a logistic regression model, and fit with X and y
+        gb = GradientBoostingClassifier(verbose=1, learning_rate=lrn_rate, n_estimators=nb_est ,max_depth=depth)
+        gb = gb.fit(mat_train, lab_train)
+
+        # check the accuracy on the training set
+        score_train =  gb.score(mat_train, lab_train)
+        score_test = gb.score(mat_test_train, lab_test_train)
+        print ("On training",score_train)
+        print ("On test", score_test)
+        mean_train += score_train/float(nb_cross_validation)
+        mean_test += score_test/float(nb_cross_validation)
+
+        y = gb.predict(mat_test_train)
+        dict_rep, dict_true, dict_false, dict_id = compare_pred_truth(lab_test_train, y)
+        for k in dict_rep.keys():
+            #print ("classe", k, "nb:", dict_rep[k], "good_pred:", dict_true[k], "fake_pred:", dict_false[k])
+            #print (" ")
+            total_mis_pred[k] += dict_false[k]
+            total_good_pred[k] += dict_true[k]
+            class_instead[k] += dict_id[k]
+        result_log_file = "data/result_boosting_100_3_fasttext.txt"
+
+    if SVM:
+        from sklearn.svm import SVC
+
+        # instantiate a logistic regression model, and fit with X and y
+        svm_mod = SVC(C=C_svm, kernel=svm_kern)
+        svm_mod = svm_mod.fit(mat_train, lab_train)
+
+        # check the accuracy on the training set
+        score_train =  svm_mod.score(mat_train, lab_train)
+        score_test = svm_mod.score(mat_test_train, lab_test_train)
+        print ("On training",score_train)
+        print ("On test", score_test)
+        mean_train += score_train/float(nb_cross_validation)
+        mean_test += score_test/float(nb_cross_validation)
+
+        y = svm_mod.predict(mat_test_train)
+        dict_rep, dict_true, dict_false, dict_id = compare_pred_truth(lab_test_train, y)
+        for k in dict_rep.keys():
+            #print ("classe", k, "nb:", dict_rep[k], "good_pred:", dict_true[k], "fake_pred:", dict_false[k])
+            #print (" ")
+            total_mis_pred[k] += dict_false[k]
+            total_good_pred[k] += dict_true[k]
+            class_instead[k] += dict_id[k]
+        result_log_file = "data/result_boosting_100_3_fasttext.txt"
+
+out = open(result_log_file, 'w')
 for k in range(51):
     print("class", k, "good pred", total_good_pred[k], "fake pred", total_mis_pred[k], "ok percent", float(total_good_pred[k])/float(total_mis_pred[k] + total_good_pred[k]))
     out.write("class " + str(k) + " good pred " + str(total_good_pred[k]) + " fake pred " + str(total_mis_pred[k]) + " ok percent " + str( float(total_good_pred[k])/float(total_mis_pred[k] + total_good_pred[k])))
@@ -127,24 +235,57 @@ print("TOTAL", "train", mean_train, "test", mean_test)
 out.write("TOTAL " + "train " + str(mean_train) +  " test " + str(mean_test))
 
 
+if Log_reg:
+    from sklearn.linear_model import LogisticRegression
+
+    # instantiate a logistic regression model, and fit with X and y
+    model = LogisticRegression(solver='newton-cg', multi_class='multinomial', C=C_log, verbose=1)
+    model = model.fit(mat, lab)
+    print("training done")
+    y = model.predict(mat_test)
+    print("prediction done")
+    f = open('data/log_reg_fasttext_modif_raw_C-500.csv', 'w')
+    for i in range(len(y)):
+        f.write(str(y[i]) + "\n")
+    f.close()
 
 
+if Ridge_reg:
+    # Ridge classifier # not bad -> to test with all the data
+    from sklearn.linear_model import RidgeClassifier
+    model_ridge = RidgeClassifier(normalize=True, alpha = alpha_reg)
+    model_ridge.fit(mat, lab)
+    print("training done")
+    y = model_ridge.predict(mat_test)
+    print("prediction done")
+    f = open('data/ridge_reg_fasttext_modif_raw_10_-4.csv', 'w')
+    for i in range(len(y)):
+        f.write(str(y[i]) + "\n")
+    f.close()
 
+if Boosting:
+    from sklearn.ensemble import GradientBoostingClassifier
+    gb = GradientBoostingClassifier(verbose=1, learning_rate=lrn_rate, n_estimators= nb_est ,max_depth=depth)
+    gb.fit(mat, lab)
+    print("training done")
+    y = gb.predict(mat_test)
+    print("prediction done")
+    f = open('data/boosting_fasttext_modif_100_3.csv', 'w')
+    for res in y:
+        f.write(str(res) + "\n")
+    f.close()
 
-# Ridge classifier # not bad -> to test with all the data
-"""from sklearn.linear_model import RidgeClassifier
-model_ridge = RidgeClassifier(normalize=True, alpha = 0.00001)
-model_ridge.fit(mat_train, lab_train)
-print "on training", model_ridge.score(mat_train, lab_train)
-print "on test training", model_ridge.score(mat_test_train, lab_test_train)"""
-"""g = open('data/created/test_train/original.csv', 'w')
-for i in range(len(lab_test_train)):
-    g.write(str(i)+ ';'+ str(lab_test_train[i])+ '\n' )
-f = open('data/created/test_train/results.csv', 'w')
-y = model_ridge.predict(mat_test_train)
-for i in range(len(y)):
-    f.write(str(i) + ';' + str(y[i]) + "\n")
-f.close()"""
+if SVM:
+    from sklearn.svm import SVC
+    svm_mod = SVC(C=C_svm, kernel=svm_kern)
+    svm_mod.fit(mat, lab)
+    print("training done")
+    y = svm_mod.predict(mat_test)
+    print("prediction done")
+    f = open('data/svm_fasttext_modif_basique.csv', 'w')
+    for res in y:
+        f.write(str(res) + "\n")
+    f.close()
 
 """f = open('data/created/results/ridge_reg_fasttext_raw.csv', 'w')
 y = model_ridge.predict(mat_test)
@@ -162,7 +303,7 @@ print "on training", model_ridge.score(mat_train, lab_train)
 print "on test training", model_ridge.score(mat_test_train, lab_test_train)"""
 
 
-# Logistic Regression 
+# Logistic Regression
 """from sklearn.linear_model import LogisticRegression
 
 
@@ -253,8 +394,3 @@ for i in range(len(result)):
     #f.write(str(i) + ';' + str(result[i]) + "\n")
     f.write(str(result[i]) + "\n")
 f.close()"""
-
-
-
-
-
