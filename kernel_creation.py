@@ -218,7 +218,7 @@ def get_array(namefile):
 def create_kernel_from_fasttext_already_created(namefile_fasttext_array, namefile_input, namefile_output):
     array_fasttex = get_array(namefile_fasttext_array)
     number_line = 0
-    out = open(namefile_output, 'a')
+    out = open(namefile_output, 'w')
     with open(namefile_input, 'r') as f:
         first = True
         for line in f:
@@ -239,15 +239,18 @@ def create_kernel_from_fasttext_already_created(namefile_fasttext_array, namefil
                 for n in nb:
                     if n in all_sent:
                         nb_appear += 1
-                vect.append(float(nb_appear) / float(size_sent))
+                vect.append(float(nb_appear) )
 
                 # nb medoc
                 nbhash = all_sent.count('#')
-                vect.append(float(nbhash) / 4. / float(size_sent))
+                vect.append(float(nbhash) / 4. )
+
+                # length sent
+                vect.append(size_sent)
 
                 # fasttext
                 for i in range(300):
-                    vect.append(array_fasttex[number_line - 2, i] / float(size_sent))
+                    vect.append(array_fasttex[number_line - 2, i] )
 
                 # writing
                 out.write(ind)
@@ -260,7 +263,45 @@ def create_kernel_from_fasttext_already_created(namefile_fasttext_array, namefil
                 first = False
         out.close()
 
+def add_medoc_to_rep(namefile_rep, namefile_sentences, namefile_medoc, namefile_output):
+    out = open(namefile_output, 'w')
+    inp = open(namefile_sentences, 'r')
+    rep = get_array(namefile_rep)
+    first = True
+    nbline = 0
+    for line in inp:
+        nbline += 1
+        print(nbline)
+        if not first:
+            new_line  = line.replace('\n', '')
+            new_line = new_line.split(';')
+            ind = new_line[0]
+            sent = new_line[1].split(' ')
 
+            vect = []
+            # representation that already exists
+            for i in range(len(rep[nbline - 2, :])):
+                vect.append(rep[nbline - 2, i])
+
+            med_vect_voc = np.zeros([1, 300])  # 300 is the size of vector in fasttext
+            for wrd in sent:
+                if len(wrd) > 0:
+                    if wrd[0] == '#':
+                        wrd = wrd.split('#')[2]
+                        med_rep = get_word(namefile_medoc, wrd, True)
+                        if med_rep != []:
+                            med_vect_voc = med_vect_voc+ np.asarray(med_rep).reshape([1, 300])
+            for i in range(300):
+                vect.append(med_vect_voc[0, i])
+
+
+            out.write(ind)
+            for i in range(len(vect)):
+                out.write(',' + str(vect[i]))
+            out.write('\n')
+
+        else:
+            first = False
 
 def get_only_fasttext(namefile_input, namefile_output):
     input = open(namefile_input, 'r')
@@ -285,6 +326,7 @@ def get_only_fasttext(namefile_input, namefile_output):
 get_only_fasttext('data/created/test/vector_input_test_fasttext.csv', 'data/created/test/vector_input_test_fasttext_only.csv')"""
 #create_fasttext_only("data/created/train/input_train_norm_medoc_corrected_v2.csv","data/created/train/vect_train_fasttext_v2.csv", 'data/cc.fr.300.vec')
 #create_fasttext_only("data/created/test/input_test_norm_medoc_corrected_v2.csv","data/created/test/vect_test_fasttext_v2.csv", 'data/cc.fr.300.vec')
-#create_kernel_from_fasttext_already_created("data/created/train/vect_train_fasttext_v2.csv", "data/created/train/input_train_norm_medoc_corrected_v2.csv","" )
-
-
+#create_kernel_from_fasttext_already_created("data/created/train/vect_train_fasttext_v2.csv", "data/created/train/input_train_norm_medoc_corrected_v2.csv","data/created/train/vector_input_fasttext_and_other_v3.csv" )
+#create_kernel_from_fasttext_already_created("data/created/test/vect_test_fasttext_v2.csv","data/created/test/input_test_norm_medoc_corrected_v2.csv", "data/created/test/vector_input_test_fasttext_and_other_v3.csv" )
+#add_medoc_to_rep('data/created/train/vector_input_fasttext_and_other_v2_modified.csv', 'data/created/train/input_train_norm_medoc_corrected_v2.csv',
+#                 'data/created/medicaments/representation_train.csv', 'data/created/train/vect_input_modified_medoc.csv')

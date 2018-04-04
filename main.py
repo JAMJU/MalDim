@@ -8,6 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from study_data import compare_pred_truth
 from collections import Counter
+from fast_test_use import train_model, get_label
 
 def get_array(namefile):
     """ Return an array from file with index + vector in each line"""
@@ -44,6 +45,19 @@ def get_label_list(namefile):
                 first = False
     return list_label
 
+def get_sentences_list(namefile_input):
+    list_sent = []
+    file = open(namefile_input)
+    first =True
+    for line in file:
+        if not first:
+            new_line = line.replace('\n', '')
+            sent = new_line.split(';')[1]
+            list_sent.append(sent)
+        else:
+            first = False
+    return list_sent
+
 def write_label(label_list, out_file, begin_index):
     out = open(out_file, 'w')
     ind = begin_index
@@ -57,13 +71,16 @@ def write_label(label_list, out_file, begin_index):
 
 # Choose the model
 #
-Log_reg = True
-C_log = 500.
+Log_reg = False
+Fast_text = True
+C_log = 20.
 
 
 
-mat = get_array( 'data/created/train/vector_input_fasttext.csv')
-mat_test = get_array('data/created/test/vector_input_test_fasttext.csv')
+mat = get_array( 'data/created/train/vect_input_modified_medoc.csv')
+mat_sent = get_sentences_list('data/created/train/input_train_norm_medoc_corrected_v2.csv')
+mat_test = get_array('data/created/test/vector_input_test_fasttext_and_other_v3.csv')
+mat_test_sent = get_sentences_list('data/created/test/input_test_norm_medoc_corrected_v2.csv')
 lab = get_label_list('data/label.csv')
 color_lab = [colors[l] for l in lab]
 
@@ -81,7 +98,10 @@ for i in range(nb_cross_validation):
     mat_test_train = mat[beg:beg + size_test, :]
     lab_test_train = lab[beg : beg + size_test]
 
+    mat_sent_test_train  = mat_sent[beg:beg + size_test]
+
     mat_train = np.concatenate((mat[0:beg], mat[beg + size_test:, :]), axis = 0)
+    mat_sent_train = mat_sent[0:beg] + mat_sent[beg + size_test:]
     lab_train = lab[0:beg] + lab[beg + size_test:]
     beg = beg + size_test
 
@@ -110,7 +130,36 @@ for i in range(nb_cross_validation):
             total_good_pred[k] += dict_true[k]
             class_instead[k] += dict_id[k]
 
-out = open("data/created/result_log_reg_500_fasttext.txt", 'w')
+    if Fast_text:
+        train_model("model_train" + str(i), mat_sent_train, lab_train)
+        labels = get_label("model_train" + str(i), mat_sent_test_train, 1)
+        label_f = labels[0]
+        label_t = get_label("model_train" + str(i), mat_sent_train, 1)
+        label_t = label_t[0]
+        dict_rep, dict_true, dict_false, dict_id = compare_pred_truth(lab_test_train, label_f)
+        total_ok = 0
+        total_fake = 0
+        for k in dict_rep.keys():
+            total_ok += dict_true[k]
+            total_fake += dict_false[k]
+            total_mis_pred[k] += dict_false[k]
+            total_good_pred[k] += dict_true[k]
+            class_instead[k] += dict_id[k]
+        mean_test += float(total_ok)/float(total_fake + total_ok)/float(nb_cross_validation)
+        print("results test:", float(total_ok)/float(total_fake + total_ok))
+        dict_rep, dict_true, dict_false, dict_id = compare_pred_truth(lab_train, label_t)
+        total_ok = 0
+        total_fake = 0
+        for k in dict_rep.keys():
+            total_ok += dict_true[k]
+            total_fake += dict_false[k]
+        mean_train+= float(total_ok) / float(total_fake + total_ok) / float(nb_cross_validation)
+        print("results train:", float(total_ok) / float(total_fake + total_ok))
+
+
+
+
+out = open("data/created/fasttext.txt", 'w')
 for k in range(51):
     print("class", k, "good pred", total_good_pred[k], "fake pred", total_mis_pred[k], "ok percent", float(total_good_pred[k])/float(total_mis_pred[k] + total_good_pred[k]))
     out.write("class " + str(k) + " good pred " + str(total_good_pred[k]) + " fake pred " + str(total_mis_pred[k]) + " ok percent " + str( float(total_good_pred[k])/float(total_mis_pred[k] + total_good_pred[k])))
@@ -125,6 +174,21 @@ for k in range(51):
     out.write('###########################################################' + '\n')
 print("TOTAL", "train", mean_train, "test", mean_test)
 out.write("TOTAL " + "train " + str(mean_train) +  " test " + str(mean_test))
+
+### Results creation
+"""if Log_reg:
+    from sklearn.linear_model import LogisticRegression
+
+    # instantiate a logistic regression model, and fit with X and y
+    model = LogisticRegression(solver='newton-cg', multi_class='multinomial', C=C_log, verbose=1)
+    model = model.fit(mat, lab)
+    print("training done")
+    y = model.predict(mat_test)
+    print("prediction done")
+    f = open('data/created/results/log_reg_fasttext_and_other_v2_raw_C-500.csv', 'w')
+    for i in range(len(y)):
+        f.write(str(y[i]) + "\n")
+    f.close()"""
 
 
 

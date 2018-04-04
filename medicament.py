@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from lev_distance import levenshtein_dist
 import enchant
+from fast_test_use import get_word
 dictionnary_french = enchant.Dict('fr_FR')
 dictionnary_french.add('libido')
 dictionnary_french.add( 'eczema')
@@ -204,6 +205,34 @@ def write_list_medoc_in_file(filename_input, filename_output):
     for med in list_medoc:
         out.write(med + '\n')
 
+def med_in_fasttext(namefile_fasttext, medoc_name):
+    """ Return True if fasttext has a representation for medoc_name"""
+    vec_rep = get_word(namefile_fasttext, medoc_name)
+    if vec_rep != []:
+        return True, vec_rep
+    else:
+        return False, []
+
+def study_rep_medoc(namefile_list_medoc, namefile_fasttext, namefile_output):
+    """ Return the percentage of medoc represented by fasttext in namefile_list_medoc and write representations available in namefile_output"""
+    inp = open(namefile_list_medoc, 'r')
+    out = open(namefile_output, 'w')
+    total = 0.
+    nb_ok = 0.
+    for line in inp:
+        new_line = line.replace('\n', '')
+        total += 1
+        in_fast, vec_rep = med_in_fasttext(namefile_fasttext, new_line)
+        if in_fast:
+            nb_ok += 1.
+            out.write(new_line)
+            for i in range(len(vec_rep)):
+                out.write(',' + str(vec_rep[i]))
+            out.write('\n')
+    return nb_ok, total
+
+
+
 
 
 
@@ -219,5 +248,5 @@ list_med_uncom = get_list_medoc_first('data/created/medicaments/med_non_commerci
 list_total_med = list_med_com + list_med_uncom
 write_new_file_with_medoc_rewritten('data/created/train/input_train_token_nor_v2.csv', 'data/created/train/input_train_norm_medoc_corrected_v2.csv', list_total_med )
 write_new_file_with_medoc_rewritten('data/created/test/input_test_token_nor_v2.csv', 'data/created/test/input_test_norm_medoc_corrected_v2.csv', list_total_med )"""
-
+#print study_rep_medoc("data/created/medicaments/train_v2_list_medoc.csv", 'data/cc.fr.300.vec', 'data/created/medicaments/representation_train.csv')
 
